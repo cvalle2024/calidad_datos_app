@@ -19,7 +19,7 @@ if st.sidebar.checkbox("📄 Ver historial HTS_TST"):
         scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         creds = Credentials.from_service_account_file("credenciales.json", scope)
         client = gspread.authorize(creds)
-        sheet = client.open("Calidad_Datos").worksheet("HTS_TST")
+        sheet = client.open("Calidad_Evaluaciones2025").worksheet("HTS_TST")
         data = sheet.get_all_records()
         df_hist_hts = pd.DataFrame(data)
         st.subheader("📊 Historial de evaluaciones HTS_TST")
@@ -237,3 +237,4 @@ elif menu == "TrianTX_RTT y TX_ML":
         df_resultados = pd.DataFrame(resultados)
         st.dataframe(df_resultados)
         st.download_button("⬇️ Descargar resultados como Excel", data=df_resultados.to_csv(index=False).encode('utf-8'), file_name="TX_ML_resultados.csv", mime="text/csv")
+
