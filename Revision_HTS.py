@@ -39,7 +39,6 @@ if mostrar_historial:
 if menu == "HTS_TST":
     st.title("📋 Evaluación de Calidad de Datos - HTS_TST")
 
-    # --- Datos generales
     st.header("🗂️ Datos generales")
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -52,7 +51,6 @@ if menu == "HTS_TST":
         registros_revisados = st.number_input("Número de registros revisados", min_value=1, step=1)
         asesor = st.text_input("Nombre del asesor (revisor)")
 
-    # --- Lista de chequeo
     st.header("✅ Lista de chequeo HTS_TST")
     st.write("Marca para cada criterio si **cumple** o **no cumple**, y anota observaciones si aplica.")
 
@@ -126,11 +124,13 @@ elif menu == "TX_ML y TX_RTT":
         abandono = st.radio("¿Abandono?", ["Sí", "No"])
         recuperado = st.radio("¿Recuperado en el trimestre?", ["Sí", "No"])
 
+    # Determinar fin del trimestre
+    anio_ref = fecha_esperada.year if fecha_esperada else datetime.today().year
     trimestre_map = {
-        "Q1": date(fecha_esperada.year if fecha_esperada else datetime.today().year, 12, 31),
-        "Q2": date(fecha_esperada.year if fecha_esperada else datetime.today().year, 3, 31),
-        "Q3": date(fecha_esperada.year if fecha_esperada else datetime.today().year, 6, 30),
-        "Q4": date(fecha_esperada.year if fecha_esperada else datetime.today().year, 9, 30),
+        "Q1": date(anio_ref, 12, 31),
+        "Q2": date(anio_ref, 3, 31),
+        "Q3": date(anio_ref, 6, 30),
+        "Q4": date(anio_ref, 9, 30),
     }
     fin_trimestre = trimestre_map[trimestre]
 
@@ -167,10 +167,7 @@ elif menu == "TX_ML y TX_RTT":
             accion_tx_curr = "NINGUNA"
             mensaje = "🟡 El paciente no cumple condiciones para TX_ML."
 
-        if cuenta_tx_ml == "ERROR":
-            st.warning(mensaje)
-        else:
-            st.success(mensaje)
+        st.success(mensaje)
 
     except Exception as e:
         st.error(f"Error al calcular días perdidos: {e}")
@@ -180,7 +177,8 @@ elif menu == "TX_ML y TX_RTT":
         sheet.append_row([
             str(fecha_ultima_visita), str(fecha_esperada), str(fecha_recuperacion), trimestre,
             abandono, recuperado, cuenta_tx_ml, accion_tx_curr,
-            pais_tx, unidad_tx, asesor_tx, str(fecha_registro)
+            pais_tx, unidad_tx, asesor_tx, str(fecha_registro),
+            mensaje  # ← Estado del usuario
         ])
 
         st.success("✅ Evaluación guardada correctamente")
