@@ -4,7 +4,11 @@ from datetime import timedelta, datetime
 import gspread
 from google.oauth2.service_account import Credentials
 
-st.set_page_config(page_title="Evaluación Calidad de Datos", layout="wide")
+st.set_page_config(
+    page_title="Evaluación Calidad de Datos",
+    layout="wide",
+    page_icon="📊"  # Favicon personalizado (puedes reemplazar este emoji con uno que represente mejor tu app)
+)
 
 # --- Cargar credenciales desde st.secrets ---
 scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
@@ -127,7 +131,7 @@ elif menu == "TX_ML y TX_RTT":
 
     if abandono == "Sí":
         dias_perdido = (fin_trimestre - fecha_esperada).days
-        fue_recuperado = recuperado == "Sí" and fecha_recuperacion <= fin_trimestre
+        fue_recuperado = recuperado == "Sí" and fecha_recuperacion is not None and fecha_recuperacion <= fin_trimestre
 
         if dias_perdido > 28 and not fue_recuperado:
             cuenta_tx_ml = "SÍ"
@@ -157,5 +161,6 @@ elif menu == "TX_ML y TX_RTT":
         ])
 
         st.success("✅ Evaluación guardada correctamente")
+
 
 
