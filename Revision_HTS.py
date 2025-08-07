@@ -124,10 +124,10 @@ elif menu == "TX_ML y TX_RTT":
 
     # --- Determinar fin del trimestre
     trimestre_map = {
-        "Q1": date(fecha_esperada.year if fecha_esperada else datetime.today().year, 12, 31),
-        "Q2": date(fecha_esperada.year if fecha_esperada else datetime.today().year, 3, 31),
-        "Q3": date(fecha_esperada.year if fecha_esperada else datetime.today().year, 6, 30),
-        "Q4": date(fecha_esperada.year if fecha_esperada else datetime.today().year, 9, 30),
+        "Q1": date(fecha_esperada.year, 12, 31),
+        "Q2": date(fecha_esperada.year, 3, 31),
+        "Q3": date(fecha_esperada.year, 6, 30),
+        "Q4": date(fecha_esperada.year, 9, 30),
     }
     fin_trimestre = trimestre_map[trimestre]
 
@@ -146,16 +146,27 @@ elif menu == "TX_ML y TX_RTT":
             cuenta_tx_ml = "ERROR"
             accion_tx_curr = "Fecha recuperación < fecha esperada"
             mensaje = "⚠️ Error: Fecha de recuperación es anterior a la cita esperada."
-        elif dias_perdido <= 28:
-            estado_usuario = "Activo"
+        elif dias_perdido < 28:
+            estado_usuario = "Activo en la cohorte"
             mensaje_recuperacion = "---"
+        elif 28 <= dias_perdido < 90:
+            estado_usuario = "Perdido en seguimiento"
+            if fecha_recuperacion:
+                if fecha_recuperacion <= fin_trimestre:
+                    mensaje_recuperacion = "Se recuperó en el trimestre"
+                else:
+                    mensaje_recuperacion = "Se recuperó en otro trimestre"
+                    cuenta_tx_ml = "SÍ"
+                    accion_tx_curr = "RESTAR"
+            else:
+                mensaje_recuperacion = "No se recuperó en el trimestre"
+                cuenta_tx_ml = "SÍ"
+                accion_tx_curr = "RESTAR"
         else:
             estado_usuario = "En abandono"
             if fecha_recuperacion:
                 if fecha_recuperacion <= fin_trimestre:
                     mensaje_recuperacion = "Se recuperó en el trimestre"
-                    cuenta_tx_ml = "NO"
-                    accion_tx_curr = "NINGUNA"
                 else:
                     mensaje_recuperacion = "Se recuperó en otro trimestre"
                     cuenta_tx_ml = "SÍ"
@@ -198,6 +209,8 @@ elif menu == "TX_ML y TX_RTT":
             st.success("✅ Evaluación guardada correctamente")
         except Exception as e:
             st.error(f"Error al guardar en Google Sheets: {e}")
+
+
 
 
 
