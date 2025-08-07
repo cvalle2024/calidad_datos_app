@@ -7,7 +7,7 @@ from google.oauth2.service_account import Credentials
 st.set_page_config(
     page_title="Evaluación Calidad de Datos",
     layout="wide",
-    page_icon="📊"  # Favicon personalizado (puedes reemplazar este emoji con uno que represente mejor tu app)
+    page_icon="📊"
 )
 
 # --- Cargar credenciales desde st.secrets ---
@@ -127,22 +127,40 @@ elif menu == "TX_ML y TX_RTT":
 
     cuenta_tx_ml = "NO"
     accion_tx_curr = "NINGUNA"
+    mensaje = ""
 
-    if abandono == "Sí" and fecha_esperada:
-        try:
-            dias_perdido = (fin_trimestre - fecha_esperada).days
-            fue_recuperado = recuperado == "Sí" and fecha_recuperacion is not None and fecha_recuperacion <= fin_trimestre
-            if dias_perdido > 28 and not fue_recuperado:
-                cuenta_tx_ml = "SÍ"
-                accion_tx_curr = "RESTAR"
-        except Exception as e:
-            st.error(f"Error en el cálculo de días perdidos: {e}")
+    try:
+        dias_perdido = (fin_trimestre - fecha_esperada).days
+        fue_recuperado = recuperado == "Sí" and fecha_recuperacion is not None and fecha_recuperacion <= fin_trimestre
 
-    mensaje = f"📉 TX_ML: {cuenta_tx_ml} | Acción TX_CURR: {accion_tx_curr}"
-    if cuenta_tx_ml == "SÍ":
-        st.warning(mensaje)
-    else:
-        st.success(mensaje)
+        if fecha_recuperacion and fecha_recuperacion < fecha_esperada:
+            cuenta_tx_ml = "ERROR"
+            accion_tx_curr = "Fecha recuperación < fecha esperada"
+            mensaje = "⚠️ Error: Fecha de recuperación es anterior a la cita esperada."
+        elif abandono == "No":
+            cuenta_tx_ml = "NO"
+            accion_tx_curr = "NINGUNA"
+            mensaje = "✅ El paciente no se perdió, no aplica TX_ML."
+        elif abandono == "Sí" and dias_perdido > 28 and not fue_recuperado:
+            cuenta_tx_ml = "SÍ"
+            accion_tx_curr = "RESTAR"
+            mensaje = "📌 El paciente se perdió y no fue recuperado en el trimestre. Se reporta en TX_ML."
+        elif abandono == "Sí" and fue_recuperado:
+            cuenta_tx_ml = "NO"
+            accion_tx_curr = "NINGUNA"
+            mensaje = "🟢 El paciente se perdió pero fue recuperado en el mismo trimestre. No entra al TX_ML."
+        else:
+            cuenta_tx_ml = "NO"
+            accion_tx_curr = "NINGUNA"
+            mensaje = "🟡 El paciente no cumple condiciones para TX_ML."
+
+        if cuenta_tx_ml == "ERROR":
+            st.warning(mensaje)
+        else:
+            st.success(mensaje)
+
+    except Exception as e:
+        st.error(f"Error al calcular días perdidos: {e}")
 
     st.subheader("🗂️ Datos generales del evaluador")
     col1, col2 = st.columns(2)
@@ -162,7 +180,6 @@ elif menu == "TX_ML y TX_RTT":
         ])
 
         st.success("✅ Evaluación guardada correctamente")
-
 
 
 
