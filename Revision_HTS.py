@@ -140,7 +140,11 @@ elif menu == "TX_ML y TX_RTT":
 
     try:
         dias_perdido = (fin_trimestre - fecha_esperada).days
-        fue_recuperado = recuperado == "Sí" and fecha_recuperacion is not None and fecha_recuperacion <= datetime.combine(fin_trimestre, datetime.min.time())
+        fue_recuperado = (
+            recuperado == "Sí" and 
+            fecha_recuperacion is not None and 
+            datetime.combine(fecha_recuperacion, datetime.min.time()) <= datetime.combine(fin_trimestre, datetime.min.time())
+        )
 
         if fecha_recuperacion and fecha_recuperacion < fecha_esperada:
             cuenta_tx_ml = "ERROR"
