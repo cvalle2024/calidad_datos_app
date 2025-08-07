@@ -124,19 +124,20 @@ elif menu == "TX_ML y TX_RTT":
         abandono = st.radio("¿Abandono?", ["Sí", "No"])
         recuperado = st.radio("¿Recuperado en el trimestre?", ["Sí", "No"])
 
-    # Determinar fin del trimestre
-    anio_ref = fecha_esperada.year if fecha_esperada else datetime.today().year
+    # --- Determinar fin del trimestre
     trimestre_map = {
-        "Q1": date(anio_ref, 12, 31),
-        "Q2": date(anio_ref, 3, 31),
-        "Q3": date(anio_ref, 6, 30),
-        "Q4": date(anio_ref, 9, 30),
+        "Q1": date(fecha_esperada.year if fecha_esperada else datetime.today().year, 12, 31),
+        "Q2": date(fecha_esperada.year if fecha_esperada else datetime.today().year, 3, 31),
+        "Q3": date(fecha_esperada.year if fecha_esperada else datetime.today().year, 6, 30),
+        "Q4": date(fecha_esperada.year if fecha_esperada else datetime.today().year, 9, 30),
     }
     fin_trimestre = trimestre_map[trimestre]
 
+    # --- Variables de salida
     cuenta_tx_ml = "NO"
     accion_tx_curr = "NINGUNA"
     mensaje = ""
+    dias_perdido = ""
 
     try:
         dias_perdido = (fin_trimestre - fecha_esperada).days
@@ -146,6 +147,7 @@ elif menu == "TX_ML y TX_RTT":
             datetime.combine(fecha_recuperacion, datetime.min.time()) <= datetime.combine(fin_trimestre, datetime.min.time())
         )
 
+        # --- Lógica completa de TX_ML
         if fecha_recuperacion and fecha_recuperacion < fecha_esperada:
             cuenta_tx_ml = "ERROR"
             accion_tx_curr = "Fecha recuperación < fecha esperada"
@@ -167,23 +169,38 @@ elif menu == "TX_ML y TX_RTT":
             accion_tx_curr = "NINGUNA"
             mensaje = "🟡 El paciente no cumple condiciones para TX_ML."
 
-        st.success(mensaje)
+        # Mostrar resultado al usuario
+        if cuenta_tx_ml == "ERROR":
+            st.warning(mensaje)
+        else:
+            st.success(mensaje)
+
+        # Mostrar días perdidos
+        st.info(f"📆 Días perdidos: {dias_perdido} días")
+        st.info(f"📉 TX_ML: {cuenta_tx_ml} | Acción TX_CURR: {accion_tx_curr}")
 
     except Exception as e:
         st.error(f"Error al calcular días perdidos: {e}")
 
+    # --- Guardar evaluación
     if st.button("📤 Guardar evaluación", key="submit_txml"):
-        sheet = client.open_by_key(SPREADSHEET_ID).worksheet(txml_sheet_name)
-        sheet.append_row([
-            str(fecha_ultima_visita), str(fecha_esperada), str(fecha_recuperacion), trimestre,
-            abandono, recuperado, cuenta_tx_ml, accion_tx_curr,
-            pais_tx, unidad_tx, asesor_tx, str(fecha_registro),
-            mensaje  # ← Estado del usuario
-        ])
+        try:
+            sheet = client.open_by_key(SPREADSHEET_ID).worksheet(txml_sheet_name)
+            
+            # Registrar encabezado si está vacío
+            if not sheet.get_all_values():
+                sheet.append_row([
+                    "Fecha última visita", "Fecha esperada", "Fecha recuperación", "Trimestre",
+                    "¿Abandono?", "¿Recuperado?", "TX_ML", "Acción TX_CURR",
+                    "País", "Unidad", "Asesor", "Fecha evaluación"
+                ])
 
-        st.success("✅ Evaluación guardada correctamente")
-
-
-
-
-
+            # Registrar datos
+            sheet.append_row([
+                str(fecha_ultima_visita), str(fecha_esperada), str(fecha_recuperacion), trimestre,
+                abandono, recuperado, cuenta_tx_ml, accion_tx_curr,
+                pais_tx, unidad_tx, asesor_tx, str(fecha_registro)
+            ])
+            st.success("✅ Evaluación guardada correctamente")
+        except Exception as e:
+            st.error(f"Error al guardar en Google Sheets: {e}")
