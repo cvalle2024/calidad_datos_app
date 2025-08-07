@@ -106,6 +106,15 @@ if menu == "HTS_TST":
 elif menu == "TX_ML y TX_RTT":
     st.title("📋 Evaluación de TX_ML y TX_RTT")
 
+    st.header("🗂️ Datos generales del evaluador")
+    col1, col2 = st.columns(2)
+    with col1:
+        pais_tx = st.selectbox("País", ["Honduras", "Guatemala", "El Salvador", "Nicaragua", "Panamá"], key="pais_tx")
+        unidad_tx = st.text_input("Nombre de la unidad", key="unidad_tx")
+    with col2:
+        asesor_tx = st.text_input("Nombre del asesor", key="asesor_tx")
+        fecha_registro = st.date_input("Fecha de evaluación", key="fecha_registro")
+
     st.header("🧾 Datos del paciente")
     col1, col2 = st.columns(2)
     with col1:
@@ -162,15 +171,6 @@ elif menu == "TX_ML y TX_RTT":
     except Exception as e:
         st.error(f"Error al calcular días perdidos: {e}")
 
-    st.subheader("🗂️ Datos generales del evaluador")
-    col1, col2 = st.columns(2)
-    with col1:
-        pais_tx = st.selectbox("País", ["Honduras", "Guatemala", "El Salvador", "Nicaragua", "Panamá"], key="pais_tx")
-        unidad_tx = st.text_input("Nombre de la unidad", key="unidad_tx")
-    with col2:
-        asesor_tx = st.text_input("Nombre del asesor", key="asesor_tx")
-        fecha_registro = st.date_input("Fecha de evaluación", key="fecha_registro")
-
     if st.button("📤 Guardar evaluación", key="submit_txml"):
         sheet = client.open_by_key(SPREADSHEET_ID).worksheet(txml_sheet_name)
         sheet.append_row([
@@ -180,7 +180,6 @@ elif menu == "TX_ML y TX_RTT":
         ])
 
         st.success("✅ Evaluación guardada correctamente")
-
 
 
 
