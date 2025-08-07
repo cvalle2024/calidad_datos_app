@@ -39,7 +39,7 @@ if mostrar_historial:
 if menu == "HTS_TST":
     st.title("📋 Evaluación de Calidad de Datos - HTS_TST")
 
-    st.header("🗂️ Datos generales")
+    st.header("💼 Datos generales")
     col1, col2, col3 = st.columns(3)
     with col1:
         pais = st.selectbox("País", ["Honduras", "Guatemala", "El Salvador", "Nicaragua", "Panamá"])
@@ -104,7 +104,7 @@ if menu == "HTS_TST":
 elif menu == "TX_ML y TX_RTT":
     st.title("📋 Evaluación de TX_ML y TX_RTT")
 
-    st.header("🗂️ Datos generales del evaluador")
+    st.header("💼 Datos generales del evaluador")
     col1, col2 = st.columns(2)
     with col1:
         pais_tx = st.selectbox("País", ["Honduras", "Guatemala", "El Salvador", "Nicaragua", "Panamá"], key="pais_tx")
@@ -113,7 +113,7 @@ elif menu == "TX_ML y TX_RTT":
         asesor_tx = st.text_input("Nombre del asesor", key="asesor_tx")
         fecha_registro = st.date_input("Fecha de evaluación", key="fecha_registro")
 
-    st.header("🧾 Datos del paciente")
+    st.header("📜 Datos del paciente")
     col1, col2 = st.columns(2)
     with col1:
         fecha_ultima_visita = st.date_input("Fecha última visita")
@@ -121,90 +121,79 @@ elif menu == "TX_ML y TX_RTT":
         fecha_recuperacion = st.date_input("Fecha de recuperación", value=None)
     with col2:
         trimestre = st.selectbox("Trimestre", ["Q1", "Q2", "Q3", "Q4"])
-        abandono = st.radio("¿Abandono?", ["Sí", "No"])
-        recuperado = st.radio("¿Recuperado en el trimestre?", ["Sí", "No"])
 
     # --- Determinar fin del trimestre
     trimestre_map = {
-        "Q1": date(fecha_esperada.year, 3, 31),
-        "Q2": date(fecha_esperada.year, 6, 30),
-        "Q3": date(fecha_esperada.year, 9, 30),
-        "Q4": date(fecha_esperada.year, 12, 31),
+        "Q1": date(fecha_esperada.year if fecha_esperada else datetime.today().year, 12, 31),
+        "Q2": date(fecha_esperada.year if fecha_esperada else datetime.today().year, 3, 31),
+        "Q3": date(fecha_esperada.year if fecha_esperada else datetime.today().year, 6, 30),
+        "Q4": date(fecha_esperada.year if fecha_esperada else datetime.today().year, 9, 30),
     }
     fin_trimestre = trimestre_map[trimestre]
 
-    # --- Validar fechas necesarias antes de continuar
-    if not fecha_ultima_visita or not fecha_esperada:
-        st.warning("⚠️ Debes ingresar la fecha de última visita y fecha esperada.")
-    else:
-        # --- Variables de salida
-        cuenta_tx_ml = "NO"
-        accion_tx_curr = "NINGUNA"
-        mensaje = ""
-        dias_perdido = ""
+    # --- Cálculo de días perdidos y lógica
+    cuenta_tx_ml = "NO"
+    accion_tx_curr = "NINGUNA"
+    mensaje = ""
+    dias_perdido = (fin_trimestre - fecha_esperada).days
+    estado_usuario = ""
+    mensaje_recuperacion = ""
 
-        try:
-            # Días perdidos depende si se recuperó o no
+    try:
+        if fecha_recuperacion and fecha_recuperacion < fecha_esperada:
+            cuenta_tx_ml = "ERROR"
+            accion_tx_curr = "Fecha recuperación < fecha esperada"
+            mensaje = "⚠️ Error: Fecha de recuperación es anterior a la cita esperada."
+        elif dias_perdido <= 28:
+            estado_usuario = "Activo"
+            mensaje_recuperacion = "---"
+        else:
+            estado_usuario = "En abandono"
             if fecha_recuperacion:
-                dias_perdido = (fecha_recuperacion - fecha_esperada).days
+                if fecha_recuperacion <= fin_trimestre:
+                    mensaje_recuperacion = "Se recuperó en el trimestre"
+                    cuenta_tx_ml = "NO"
+                    accion_tx_curr = "NINGUNA"
+                else:
+                    mensaje_recuperacion = "Se recuperó en otro trimestre"
+                    cuenta_tx_ml = "SÍ"
+                    accion_tx_curr = "RESTAR"
             else:
-                dias_perdido = (fin_trimestre - fecha_esperada).days
-
-            fue_recuperado = (
-                recuperado == "Sí" and 
-                fecha_recuperacion is not None and 
-                datetime.combine(fecha_recuperacion, datetime.min.time()) <= datetime.combine(fin_trimestre, datetime.min.time())
-            )
-
-            # --- Lógica TX_ML corregida
-            if fecha_recuperacion and fecha_recuperacion < fecha_esperada:
-                cuenta_tx_ml = "ERROR"
-                accion_tx_curr = "Fecha recuperación < fecha esperada"
-                mensaje = "⚠️ Error: Fecha de recuperación es anterior a la cita esperada."
-            elif abandono == "No":
-                cuenta_tx_ml = "NO"
-                accion_tx_curr = "NINGUNA"
-                mensaje = "✅ El paciente no se perdió, no aplica TX_ML."
-            elif abandono == "Sí" and dias_perdido > 28 and not fue_recuperado:
+                mensaje_recuperacion = "No se recuperó en el trimestre"
                 cuenta_tx_ml = "SÍ"
                 accion_tx_curr = "RESTAR"
-                mensaje = "📌 Usuario en abandono: no fue recuperado en el trimestre. Se reporta en TX_ML."
-            elif abandono == "Sí" and fue_recuperado:
-                cuenta_tx_ml = "NO"
-                accion_tx_curr = "NINGUNA"
-                mensaje = "🟢 Usuario recuperado en el mismo trimestre. No entra al TX_ML."
-            else:
-                cuenta_tx_ml = "NO"
-                accion_tx_curr = "NINGUNA"
-                mensaje = "🟡 El paciente no cumple condiciones para TX_ML."
 
-            # Mostrar resultado
-            if cuenta_tx_ml == "ERROR":
-                st.warning(mensaje)
-            else:
-                st.success(mensaje)
+        mensaje = f"🔹 Estado del usuario: {estado_usuario} | {mensaje_recuperacion}"
 
-            st.info(f"📆 Días perdidos: {dias_perdido} días")
-            st.info(f"📉 TX_ML: {cuenta_tx_ml} | Acción TX_CURR: {accion_tx_curr}")
+        if cuenta_tx_ml == "ERROR":
+            st.warning(mensaje)
+        else:
+            st.success(mensaje)
 
-        except Exception as e:
-            st.error(f"Error al calcular días perdidos: {e}")
+        st.info(f"🗓️ Días perdidos: {dias_perdido} días")
+        st.info(f"📉 TX_ML: {cuenta_tx_ml} | Acción TX_CURR: {accion_tx_curr}")
 
-        # --- Guardar evaluación
-        if st.button("📤 Guardar evaluación", key="submit_txml"):
-            try:
-                sheet = client.open_by_key(SPREADSHEET_ID).worksheet(txml_sheet_name)
-                if not sheet.get_all_values():
-                    sheet.append_row([
-                        "Fecha última visita", "Fecha esperada", "Fecha recuperación", "Trimestre",
-                        "¿Abandono?", "¿Recuperado?", "TX_ML", "Acción TX_CURR",
-                        "País", "Unidad", "Asesor", "Fecha evaluación", "Días perdidos"
-                    ])
+    except Exception as e:
+        st.error(f"Error al calcular evaluación: {e}")
+
+    # --- Guardar evaluación
+    if st.button("📤 Guardar evaluación", key="submit_txml"):
+        try:
+            sheet = client.open_by_key(SPREADSHEET_ID).worksheet(txml_sheet_name)
+
+            if not sheet.get_all_values():
                 sheet.append_row([
-                    str(fecha_ultima_visita), str(fecha_esperada), str(fecha_recuperacion) if fecha_recuperacion else "",
-                    trimestre, abandono, recuperado, cuenta_tx_ml, accion_tx_curr,
-                    pais_tx, unidad_tx, asesor_tx, str(fecha_registro), dias_perdido
+                    "Fecha última visita", "Fecha esperada", "Fecha recuperación", "Trimestre",
+                    "Estado usuario", "Mensaje recuperación", "TX_ML", "Acción TX_CURR",
+                    "País", "Unidad", "Asesor", "Fecha evaluación"
                 ])
-                st.success("✅ Evaluación guardada correctamente")
-            except Exception as e:
-                st.error(f"Error al guardar en Google Sheets: {e}")
+
+            sheet.append_row([
+                str(fecha_ultima_visita), str(fecha_esperada), str(fecha_recuperacion), trimestre,
+                estado_usuario, mensaje_recuperacion, cuenta_tx_ml, accion_tx_curr,
+                pais_tx, unidad_tx, asesor_tx, str(fecha_registro)
+            ])
+            st.success("✅ Evaluación guardada correctamente")
+        except Exception as e:
+            st.error(f"Error al guardar en Google Sheets: {e}")
+
