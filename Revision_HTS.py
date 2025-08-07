@@ -207,15 +207,18 @@ elif menu == "TX_ML y TX_RTT":
                 pais_tx, unidad_tx, asesor_tx, str(fecha_registro)
             ])
             st.success("✅ Evaluación guardada correctamente")
-        except Exception as e:
-            st.error(f"Error al guardar en Google Sheets: {e}")
 
-# --- Mostrar tabla virtual con registros recientes
+            # --- Mostrar tabla virtual con registros recientes
             registros = sheet.get_all_records()
             df_registros = pd.DataFrame(registros)
 
             st.subheader("🗂️ Registro actual en la hoja")
             st.dataframe(df_registros.tail(5))  # Muestra los últimos 5 registros (puedes ajustar a .tail(1) para solo el último)
+
+        except Exception as e:
+            st.error(f"Error al guardar en Google Sheets: {e}")
+
+
 
 
 
