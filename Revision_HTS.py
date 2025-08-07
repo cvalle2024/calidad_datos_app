@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, date
 import gspread
 from google.oauth2.service_account import Credentials
 
@@ -118,10 +118,10 @@ elif menu == "TX_ML y TX_RTT":
         recuperado = st.radio("¿Recuperado en el trimestre?", ["Sí", "No"])
 
     trimestre_map = {
-        "Q1": datetime(fecha_esperada.year if fecha_esperada else datetime.today().year, 12, 31),
-        "Q2": datetime(fecha_esperada.year if fecha_esperada else datetime.today().year, 3, 31),
-        "Q3": datetime(fecha_esperada.year if fecha_esperada else datetime.today().year, 6, 30),
-        "Q4": datetime(fecha_esperada.year if fecha_esperada else datetime.today().year, 9, 30),
+        "Q1": date(fecha_esperada.year if fecha_esperada else datetime.today().year, 12, 31),
+        "Q2": date(fecha_esperada.year if fecha_esperada else datetime.today().year, 3, 31),
+        "Q3": date(fecha_esperada.year if fecha_esperada else datetime.today().year, 6, 30),
+        "Q4": date(fecha_esperada.year if fecha_esperada else datetime.today().year, 9, 30),
     }
     fin_trimestre = trimestre_map[trimestre]
 
@@ -131,7 +131,7 @@ elif menu == "TX_ML y TX_RTT":
 
     try:
         dias_perdido = (fin_trimestre - fecha_esperada).days
-        fue_recuperado = recuperado == "Sí" and fecha_recuperacion is not None and fecha_recuperacion <= fin_trimestre
+        fue_recuperado = recuperado == "Sí" and fecha_recuperacion is not None and fecha_recuperacion <= datetime.combine(fin_trimestre, datetime.min.time())
 
         if fecha_recuperacion and fecha_recuperacion < fecha_esperada:
             cuenta_tx_ml = "ERROR"
@@ -180,6 +180,7 @@ elif menu == "TX_ML y TX_RTT":
         ])
 
         st.success("✅ Evaluación guardada correctamente")
+
 
 
 
