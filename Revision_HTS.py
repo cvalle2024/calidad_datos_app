@@ -157,11 +157,11 @@ elif menu == "TX_ML y TX_RTT":
         elif abandono == "Sí" and dias_perdido > 28 and not fue_recuperado:
             cuenta_tx_ml = "SÍ"
             accion_tx_curr = "RESTAR"
-            mensaje = "📌 El paciente se perdió y no fue recuperado en el trimestre. Se reporta en TX_ML."
+            mensaje = "📌 Usuario en abandono: no fue recuperado en el trimestre. Se reporta en TX_ML."
         elif abandono == "Sí" and fue_recuperado:
             cuenta_tx_ml = "NO"
             accion_tx_curr = "NINGUNA"
-            mensaje = "🟢 El paciente se perdió pero fue recuperado en el mismo trimestre. No entra al TX_ML."
+            mensaje = "🟢 Usuario recuperado en el mismo trimestre. No entra al TX_ML."
         else:
             cuenta_tx_ml = "NO"
             accion_tx_curr = "NINGUNA"
@@ -184,6 +184,7 @@ elif menu == "TX_ML y TX_RTT":
         ])
 
         st.success("✅ Evaluación guardada correctamente")
+
 
 
 
