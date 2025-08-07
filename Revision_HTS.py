@@ -135,9 +135,11 @@ elif menu == "TX_ML y TX_RTT":
     cuenta_tx_ml = "NO"
     accion_tx_curr = "NINGUNA"
     mensaje = ""
-    dias_perdido = (fin_trimestre - fecha_esperada).days
     estado_usuario = ""
     mensaje_recuperacion = ""
+
+    fecha_comparacion = fecha_recuperacion or date.today()
+    dias_perdido = (fecha_comparacion - fecha_esperada).days
 
     try:
         if fecha_recuperacion and fecha_recuperacion < fecha_esperada:
@@ -196,6 +198,7 @@ elif menu == "TX_ML y TX_RTT":
             st.success("✅ Evaluación guardada correctamente")
         except Exception as e:
             st.error(f"Error al guardar en Google Sheets: {e}")
+
 
 
 
