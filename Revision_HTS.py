@@ -117,25 +117,26 @@ elif menu == "TX_ML y TX_RTT":
         abandono = st.radio("¿Abandono?", ["Sí", "No"])
         recuperado = st.radio("¿Recuperado en el trimestre?", ["Sí", "No"])
 
-    # Definir fin de trimestre
     trimestre_map = {
-        "Q1": datetime(fecha_esperada.year, 12, 31),
-        "Q2": datetime(fecha_esperada.year, 3, 31),
-        "Q3": datetime(fecha_esperada.year, 6, 30),
-        "Q4": datetime(fecha_esperada.year, 9, 30),
+        "Q1": datetime(fecha_esperada.year if fecha_esperada else datetime.today().year, 12, 31),
+        "Q2": datetime(fecha_esperada.year if fecha_esperada else datetime.today().year, 3, 31),
+        "Q3": datetime(fecha_esperada.year if fecha_esperada else datetime.today().year, 6, 30),
+        "Q4": datetime(fecha_esperada.year if fecha_esperada else datetime.today().year, 9, 30),
     }
     fin_trimestre = trimestre_map[trimestre]
 
     cuenta_tx_ml = "NO"
     accion_tx_curr = "NINGUNA"
 
-    if abandono == "Sí":
-        dias_perdido = (fin_trimestre - fecha_esperada).days
-        fue_recuperado = recuperado == "Sí" and fecha_recuperacion is not None and fecha_recuperacion <= fin_trimestre
-
-        if dias_perdido > 28 and not fue_recuperado:
-            cuenta_tx_ml = "SÍ"
-            accion_tx_curr = "RESTAR"
+    if abandono == "Sí" and fecha_esperada:
+        try:
+            dias_perdido = (fin_trimestre - fecha_esperada).days
+            fue_recuperado = recuperado == "Sí" and fecha_recuperacion is not None and fecha_recuperacion <= fin_trimestre
+            if dias_perdido > 28 and not fue_recuperado:
+                cuenta_tx_ml = "SÍ"
+                accion_tx_curr = "RESTAR"
+        except Exception as e:
+            st.error(f"Error en el cálculo de días perdidos: {e}")
 
     mensaje = f"📉 TX_ML: {cuenta_tx_ml} | Acción TX_CURR: {accion_tx_curr}"
     if cuenta_tx_ml == "SÍ":
@@ -161,6 +162,8 @@ elif menu == "TX_ML y TX_RTT":
         ])
 
         st.success("✅ Evaluación guardada correctamente")
+
+
 
 
 
