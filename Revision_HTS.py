@@ -29,7 +29,9 @@ if mostrar_historial:
     st.subheader("📊 Historial de evaluaciones")
     st.dataframe(df_hist)
 
-# --- HTS_TST Formulario ---
+# ==========================
+# ======= HTS_TST ==========
+# ==========================
 if menu == "HTS_TST":
     st.title("📋 Evaluación de Calidad de Datos - HTS_TST")
 
@@ -64,12 +66,12 @@ if menu == "HTS_TST":
     respuestas = []
     for i, criterio in enumerate(criterios, 1):
         st.subheader(f"{i}. {criterio}")
-        col1, col2, col3 = st.columns([1,1,2])
-        with col1:
+        c1, c2, c3 = st.columns([1,1,2])
+        with c1:
             cumple = st.radio("Cumple", ["Sí", "No"], key=f"cumple_{i}")
-        with col2:
+        with c2:
             accion = st.radio("Acción correctiva realizada", ["Sí", "No"], key=f"accion_{i}")
-        with col3:
+        with c3:
             observacion = st.text_input("Observaciones", key=f"obs_{i}")
 
         respuestas.append({
@@ -91,10 +93,36 @@ if menu == "HTS_TST":
         st.dataframe(df_resumen)
         st.download_button("⬇️ Descargar Excel", data=df_resumen.to_csv(index=False).encode("utf-8"), file_name="HTS_TST_resultados.csv")
 
-# --- TX_ML / TX_RTT ---
+# ==========================
+# ====== TX_ML / RTT =======
+# ==========================
 elif menu == "TX_ML y TX_RTT":
     st.title("📋 Evaluación TX_ML y TX_RTT")
 
+    # ---------- Utilidades seguras ----------
+    def _es_fecha(x):
+        return isinstance(x, date)
+
+    def _anio_base(fecha_esperada, fecha_registro):
+        if _es_fecha(fecha_esperada):
+            return fecha_esperada.year
+        if _es_fecha(fecha_registro):
+            return fecha_registro.year
+        return date.today().year
+
+    def _fin_trimestre(tri, anio):
+        limites = {
+            "Q1": date(anio, 12, 31),
+            "Q2": date(anio, 3, 31),
+            "Q3": date(anio, 6, 30),
+            "Q4": date(anio, 9, 30)
+        }
+        return limites[tri]
+
+    def _fmt_fecha(x):
+        return x.strftime("%Y-%m-%d") if _es_fecha(x) else ""
+
+    # ---------- Datos generales ----------
     st.header("💼 Datos generales")
     col1, col2 = st.columns(2)
     with col1:
@@ -104,77 +132,114 @@ elif menu == "TX_ML y TX_RTT":
         asesor_tx = st.text_input("Asesor responsable", key="asesor_tx")
         fecha_registro = st.date_input("Fecha de evaluación", key="fecha_eval")
 
+    # ---------- Datos del paciente ----------
     st.header("🧑 Datos del paciente")
-    col1, col2 = st.columns(2)
-    with col1:
-        fecha_ultima_visita = st.date_input("Fecha última visita", value=None)
-        fecha_esperada = st.date_input("Fecha esperada de visita", value=None)
-        fecha_recuperacion = st.date_input("Fecha de recuperación", value=None)
-    with col2:
+    c1, c2 = st.columns(2)
+    with c1:
+        # Permitimos vacío (None)
+        fecha_ultima_visita = st.date_input("Fecha última visita", value=None, key="f_ult_visita")
+        fecha_esperada = st.date_input("Fecha esperada de visita", value=None, key="f_esperada")
+        st.caption("Requerido para calcular días perdidos y TX_ML/TX_CURR")
+        fecha_recuperacion = st.date_input("Fecha de recuperación", value=None, key="f_recuperacion")
+    with c2:
         trimestre = st.selectbox("Trimestre", ["Q1", "Q2", "Q3", "Q4"])
 
-    trimestre_map = {
-        "Q1": date(fecha_esperada.year, 12, 31),
-        "Q2": date(fecha_esperada.year, 3, 31),
-        "Q3": date(fecha_esperada.year, 6, 30),
-        "Q4": date(fecha_esperada.year, 9, 30)
-    }
-    fin_trimestre = trimestre_map[trimestre]
+    # Año de referencia robusto
+    anio_ref = _anio_base(fecha_esperada, fecha_registro)
+    fin_trimestre = _fin_trimestre(trimestre, anio_ref)
 
-    dias_perdido = (fecha_recuperacion or date.today()) - fecha_esperada
-    dias_perdido = dias_perdido.days
+    # Cálculo de días perdidos sólo si existe fecha_esperada
+    if _es_fecha(fecha_esperada):
+        ref = fecha_recuperacion if _es_fecha(fecha_recuperacion) else date.today()
+        dias_perdido = (ref - fecha_esperada).days
+    else:
+        dias_perdido = None  # No se puede calcular sin fecha_esperada
 
     cuenta_tx_ml = "NO"
     accion_tx_curr = "NINGUNA"
-    mensaje = ""
     estado_usuario = ""
     mensaje_recuperacion = ""
+    alerta_logica = ""
 
-    if fecha_recuperacion and fecha_recuperacion < fecha_esperada:
+    # Reglas con tolerancia a nulos
+    if _es_fecha(fecha_recuperacion) and _es_fecha(fecha_esperada) and (fecha_recuperacion < fecha_esperada):
         cuenta_tx_ml = "ERROR"
         accion_tx_curr = "Fecha de recuperación < esperada"
-        mensaje = "⚠️ Fecha de recuperación es anterior a la esperada."
-    elif dias_perdido < 28:
-        estado_usuario = "Activo en la cohorte"
-        mensaje_recuperacion = "---"
-    elif 28 <= dias_perdido < 90:
-        estado_usuario = "Perdido en seguimiento"
-        if fecha_recuperacion:
-            if fecha_recuperacion <= fin_trimestre:
-                mensaje_recuperacion = "Se recuperó en el trimestre"
-            else:
-                mensaje_recuperacion = "Se recuperó en otro trimestre"
-                cuenta_tx_ml = "SÍ"
-                accion_tx_curr = "RESTAR"
-        else:
-            mensaje_recuperacion = "No se recuperó en el trimestre"
-            cuenta_tx_ml = "SÍ"
-            accion_tx_curr = "RESTAR"
+        alerta_logica = "⚠️ Fecha de recuperación es anterior a la esperada."
+    elif dias_perdido is None:
+        estado_usuario = "Información insuficiente"
+        mensaje_recuperacion = "No se puede calcular sin 'Fecha esperada de visita'."
+        cuenta_tx_ml = "N/A"
+        accion_tx_curr = "N/A"
     else:
-        estado_usuario = "En abandono"
-        if fecha_recuperacion:
-            if fecha_recuperacion <= fin_trimestre:
-                mensaje_recuperacion = "Se recuperó en el trimestre"
+        if dias_perdido < 28:
+            estado_usuario = "Activo en la cohorte"
+            mensaje_recuperacion = "---"
+            cuenta_tx_ml = "NO"
+            accion_tx_curr = "NINGUNA"
+        elif 28 <= dias_perdido < 90:
+            estado_usuario = "Perdido en seguimiento"
+            if _es_fecha(fecha_recuperacion):
+                if fecha_recuperacion <= fin_trimestre:
+                    mensaje_recuperacion = "Se recuperó en el trimestre"
+                    cuenta_tx_ml = "NO"
+                    accion_tx_curr = "NINGUNA"
+                else:
+                    mensaje_recuperacion = "Se recuperó en otro trimestre"
+                    cuenta_tx_ml = "SÍ"
+                    accion_tx_curr = "RESTAR"
             else:
-                mensaje_recuperacion = "Se recuperó en otro trimestre"
+                mensaje_recuperacion = "No se recuperó en el trimestre"
                 cuenta_tx_ml = "SÍ"
                 accion_tx_curr = "RESTAR"
         else:
-            mensaje_recuperacion = "No se recuperó en el trimestre"
-            cuenta_tx_ml = "SÍ"
-            accion_tx_curr = "RESTAR"
+            estado_usuario = "En abandono"
+            if _es_fecha(fecha_recuperacion):
+                if fecha_recuperacion <= fin_trimestre:
+                    mensaje_recuperacion = "Se recuperó en el trimestre"
+                    cuenta_tx_ml = "NO"
+                    accion_tx_curr = "NINGUNA"
+                else:
+                    mensaje_recuperacion = "Se recuperó en otro trimestre"
+                    cuenta_tx_ml = "SÍ"
+                    accion_tx_curr = "RESTAR"
+            else:
+                mensaje_recuperacion = "No se recuperó en el trimestre"
+                cuenta_tx_ml = "SÍ"
+                accion_tx_curr = "RESTAR"
 
-    mensaje = f"🔹 Estado: {estado_usuario} | {mensaje_recuperacion}"
-    st.success(mensaje)
-    st.info(f"🗓 Días perdidos: {dias_perdido}")
+    # Mensajes
+    if alerta_logica:
+        st.warning(alerta_logica)
+
+    estado_txt = f"🔹 Estado: {estado_usuario} | {mensaje_recuperacion}"
+    st.success(estado_txt)
+
+    if dias_perdido is None:
+        st.info("🗓 Días perdidos: N/D (falta 'Fecha esperada de visita')")
+    else:
+        st.info(f"🗓 Días perdidos: {dias_perdido}")
+
     st.info(f"📉 TX_ML: {cuenta_tx_ml} | TX_CURR: {accion_tx_curr}")
 
-    if st.button("📤 Guardar evaluación", key="guardar_tx"):
+    # ---------- Reglas de habilitación de guardado ----------
+    puede_guardar = _es_fecha(fecha_esperada) and not (
+        _es_fecha(fecha_recuperacion) and _es_fecha(fecha_esperada) and (fecha_recuperacion < fecha_esperada)
+    )
+
+    # Mensajes de validación
+    if not _es_fecha(fecha_esperada):
+        st.error("❗ Falta 'Fecha esperada de visita'. No se puede guardar hasta ingresarla.")
+    elif _es_fecha(fecha_recuperacion) and _es_fecha(fecha_esperada) and (fecha_recuperacion < fecha_esperada):
+        st.error("❗ La 'Fecha de recuperación' no puede ser anterior a la 'Fecha esperada de visita'.")
+
+    # ---------- Guardar ----------
+    if st.button("📤 Guardar evaluación", key="guardar_tx", disabled=not puede_guardar):
         sheet = client.open_by_key(SPREADSHEET_ID).worksheet(txml_sheet_name)
         sheet.append_row([
-            str(fecha_ultima_visita), str(fecha_esperada), str(fecha_recuperacion), trimestre,
+            _fmt_fecha(fecha_ultima_visita), _fmt_fecha(fecha_esperada), _fmt_fecha(fecha_recuperacion), trimestre,
             estado_usuario, mensaje_recuperacion, cuenta_tx_ml, accion_tx_curr,
-            pais_tx, unidad_tx, asesor_tx, str(fecha_registro)
+            pais_tx, unidad_tx, asesor_tx, _fmt_fecha(fecha_registro)
         ])
         st.success("✅ Evaluación guardada")
 
@@ -182,11 +247,6 @@ elif menu == "TX_ML y TX_RTT":
         df_reg = pd.DataFrame(registros)
         st.subheader("🗂 Registros recientes")
         st.dataframe(df_reg.tail(5))
-
-
-
-
-
 
 
 
