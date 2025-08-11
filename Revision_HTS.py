@@ -107,8 +107,8 @@ elif menu == "TX_ML y TX_RTT":
     st.header("🧑 Datos del paciente")
     col1, col2 = st.columns(2)
     with col1:
-        fecha_ultima_visita = st.date_input("Fecha última visita")
-        fecha_esperada = st.date_input("Fecha esperada de visita")
+        fecha_ultima_visita = st.date_input("Fecha última visita", value=None)
+        fecha_esperada = st.date_input("Fecha esperada de visita", value=None)
         fecha_recuperacion = st.date_input("Fecha de recuperación", value=None)
     with col2:
         trimestre = st.selectbox("Trimestre", ["Q1", "Q2", "Q3", "Q4"])
@@ -182,6 +182,7 @@ elif menu == "TX_ML y TX_RTT":
         df_reg = pd.DataFrame(registros)
         st.subheader("🗂 Registros recientes")
         st.dataframe(df_reg.tail(5))
+
 
 
 
