@@ -27,7 +27,7 @@ if mostrar_historial:
     data = sheet.get_all_records()
     df_hist = pd.DataFrame(data)
     st.subheader("📊 Historial de evaluaciones")
-    st.dataframe(df_hist)
+    st.dataframe(df_hist, use_container_width=True)
 
 # ==========================
 # ======= HTS_TST ==========
@@ -39,7 +39,10 @@ if menu == "HTS_TST":
     col1, col2, col3 = st.columns(3)
     with col1:
         pais = st.selectbox("País", ["Honduras", "Guatemala", "El Salvador", "Nicaragua", "Panamá"])
-        mes_reporte = st.selectbox("Mes de reporte", ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"])
+        mes_reporte = st.selectbox(
+            "Mes de reporte",
+            ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
+        )
     with col2:
         unidad = st.text_input("Nombre de la unidad")
         fecha_recepcion = st.date_input("Fecha de recepción")
@@ -68,9 +71,9 @@ if menu == "HTS_TST":
         st.subheader(f"{i}. {criterio}")
         c1, c2, c3 = st.columns([1,1,2])
         with c1:
-            cumple = st.radio("Cumple", ["Sí", "No"], key=f"cumple_{i}")
+            cumple = st.radio("Cumple", ["Sí", "No"], key=f"cumple_{i}", horizontal=True)
         with c2:
-            accion = st.radio("Acción correctiva realizada", ["Sí", "No"], key=f"accion_{i}")
+            accion = st.radio("Acción correctiva realizada", ["Sí", "No"], key=f"accion_{i}", horizontal=True)
         with c3:
             observacion = st.text_input("Observaciones", key=f"obs_{i}")
 
@@ -81,6 +84,38 @@ if menu == "HTS_TST":
             "observacion": observacion
         })
 
+    # === Resumen visual de cumplimiento ===
+    st.subheader("📈 Resumen de cumplimiento")
+    df_chk = pd.DataFrame(respuestas)
+
+    # Asegurar orden "Sí", "No" aunque falte alguno
+    conteo_global = df_chk['cumple'].value_counts().reindex(['Sí', 'No'], fill_value=0)
+    df_global = conteo_global.rename_axis('Estado').to_frame('Cantidad')
+
+    colg1, colg2 = st.columns([1,2])
+    with colg1:
+        st.metric("Total criterios", int(df_chk.shape[0]))
+        st.metric("Cumplen (Sí)", int(conteo_global.get('Sí', 0)))
+        st.metric("No cumplen (No)", int(conteo_global.get('No', 0)))
+
+    with colg2:
+        st.caption("Total de criterios que cumplen vs no cumplen")
+        st.bar_chart(df_global, use_container_width=True)
+
+    # --- Barras por criterio (apiladas Sí/No) ---
+    st.subheader("🧩 Cumplimiento por criterio")
+    pivot_criterio = (
+        df_chk
+        .pivot_table(index='criterio', columns='cumple', values='accion_correctiva', aggfunc='count', fill_value=0)
+        .reindex(columns=['Sí', 'No'], fill_value=0)
+    )
+    st.caption("Cada barra muestra, por criterio, cuántas veces se marcó 'Sí' y 'No'")
+    st.bar_chart(pivot_criterio, use_container_width=True)
+
+    with st.expander("Ver detalle de criterios"):
+        st.dataframe(pivot_criterio.reset_index(), use_container_width=True)
+
+    # --- Envío a Google Sheets ---
     if st.button("📤 Enviar evaluación", key="submit_hts"):
         sheet = client.open_by_key(SPREADSHEET_ID).worksheet(hts_sheet_name)
         for fila in respuestas:
@@ -90,8 +125,12 @@ if menu == "HTS_TST":
             ])
         st.success("✅ Evaluación enviada y guardada")
         df_resumen = pd.DataFrame(respuestas)
-        st.dataframe(df_resumen)
-        st.download_button("⬇️ Descargar Excel", data=df_resumen.to_csv(index=False).encode("utf-8"), file_name="HTS_TST_resultados.csv")
+        st.dataframe(df_resumen, use_container_width=True)
+        st.download_button(
+            "⬇️ Descargar Excel",
+            data=df_resumen.to_csv(index=False).encode("utf-8"),
+            file_name="HTS_TST_resultados.csv"
+        )
 
 # ==========================
 # ====== TX_ML / RTT =======
@@ -136,7 +175,6 @@ elif menu == "TX_ML y TX_RTT":
     st.header("🧑 Datos del paciente")
     c1, c2 = st.columns(2)
     with c1:
-        # Permitimos vacío (None)
         fecha_ultima_visita = st.date_input("Fecha última visita", value=None, key="f_ult_visita")
         fecha_esperada = st.date_input("Fecha esperada de visita", value=None, key="f_esperada")
         st.caption("Requerido para calcular días perdidos y TX_ML/TX_CURR")
@@ -246,7 +284,8 @@ elif menu == "TX_ML y TX_RTT":
         registros = sheet.get_all_records()
         df_reg = pd.DataFrame(registros)
         st.subheader("🗂 Registros recientes")
-        st.dataframe(df_reg.tail(5))
+        st.dataframe(df_reg.tail(5), use_container_width=True)
+
 
 
 
